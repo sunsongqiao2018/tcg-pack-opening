@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(/c/Users/sunso/AppData/Roaming/npm/npm.cmd run *)",
+      "Skill(run)",
+      "Skill(run:*)"
+    ]
+  }
+}
