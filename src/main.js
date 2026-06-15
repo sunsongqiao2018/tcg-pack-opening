@@ -147,9 +147,11 @@ let touchStartY = 0;
 // --- Card examine drag state ---
 let isCardDragging = false;
 let cardDragStartX = 0;
+let cardDragStartY = 0;
+let cardPanStartX = 0;
+let cardPanStartY = 0;
 let cardDragMoved = false;
 let suppressNextClick = false;
-const MAX_CARD_ROTATE = 15 * Math.PI / 180;
 
 // --- Wheel state ---
 const wheelState = { angle: 0 };
@@ -337,6 +339,9 @@ canvas.addEventListener('mousedown', (e) => {
   if (state === STATE.REVEALED && selectedCard) {
     isCardDragging = true;
     cardDragStartX = e.clientX;
+    cardDragStartY = e.clientY;
+    cardPanStartX = selectedCard.group.position.x;
+    cardPanStartY = selectedCard.group.position.y;
     cardDragMoved = false;
     return;
   }
@@ -362,7 +367,7 @@ canvas.addEventListener('mouseup', (e) => {
     isCardDragging = false;
     if (cardDragMoved && selectedCard) {
       suppressNextClick = true;
-      gsap.to(selectedCard.group.rotation, { y: 0, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
+      gsap.to(selectedCard.group.position, { x: 0, y: 0.5, z: 3.8, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
     }
     return;
   }
@@ -391,7 +396,7 @@ canvas.addEventListener('mouseleave', () => {
   if (isCardDragging) {
     isCardDragging = false;
     if (selectedCard) {
-      gsap.to(selectedCard.group.rotation, { y: 0, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
+      gsap.to(selectedCard.group.position, { x: 0, y: 0.5, z: 3.8, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
     }
     return;
   }
@@ -444,8 +449,10 @@ canvas.addEventListener('mousemove', (e) => {
   if (state === STATE.REVEALED && selectedCard) {
     if (isCardDragging) {
       const dx = e.clientX - cardDragStartX;
-      if (Math.abs(dx) > 3) cardDragMoved = true;
-      selectedCard.group.rotation.y = Math.max(-MAX_CARD_ROTATE, Math.min(MAX_CARD_ROTATE, dx * 0.003));
+      const dy = e.clientY - cardDragStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) cardDragMoved = true;
+      selectedCard.group.position.x = cardPanStartX + dx * 0.007;
+      selectedCard.group.position.y = cardPanStartY - dy * 0.007;
       canvas.style.cursor = 'grabbing';
     } else {
       canvas.style.cursor = 'grab';
@@ -509,6 +516,9 @@ canvas.addEventListener('touchstart', (e) => {
   if (state === STATE.REVEALED && selectedCard) {
     isCardDragging = true;
     cardDragStartX = touch.clientX;
+    cardDragStartY = touch.clientY;
+    cardPanStartX = selectedCard.group.position.x;
+    cardPanStartY = selectedCard.group.position.y;
     cardDragMoved = false;
     return;
   }
@@ -535,8 +545,10 @@ canvas.addEventListener('touchmove', (e) => {
 
   if (isCardDragging && state === STATE.REVEALED && selectedCard) {
     const dx = touch.clientX - cardDragStartX;
-    if (Math.abs(dx) > 3) cardDragMoved = true;
-    selectedCard.group.rotation.y = Math.max(-MAX_CARD_ROTATE, Math.min(MAX_CARD_ROTATE, dx * 0.003));
+    const dy = touch.clientY - cardDragStartY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) cardDragMoved = true;
+    selectedCard.group.position.x = cardPanStartX + dx * 0.007;
+    selectedCard.group.position.y = cardPanStartY - dy * 0.007;
     return;
   }
 
@@ -568,7 +580,7 @@ canvas.addEventListener('touchend', (e) => {
   if (isCardDragging) {
     isCardDragging = false;
     if (cardDragMoved && selectedCard) {
-      gsap.to(selectedCard.group.rotation, { y: 0, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
+      gsap.to(selectedCard.group.position, { x: 0, y: 0.5, z: 3.8, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
       return;
     }
   }
@@ -621,7 +633,7 @@ canvas.addEventListener('touchcancel', () => {
   if (isCardDragging) {
     isCardDragging = false;
     if (selectedCard) {
-      gsap.to(selectedCard.group.rotation, { y: 0, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
+      gsap.to(selectedCard.group.position, { x: 0, y: 0.5, z: 3.8, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
     }
     return;
   }
@@ -648,8 +660,10 @@ function animate() {
   time += 0.016;
 
   const inWheelView = state === STATE.IDLE_FAN || state === STATE.REVEALING || state === STATE.REVEALED;
-  smoothCamX += ((inWheelView ? 4.0 : 0) - smoothCamX) * 0.05;
-  smoothCamY += ((inWheelView ? 2.5 : 1.5) - smoothCamY) * 0.05;
+  const targetCamX = state === STATE.REVEALED ? 0.0 : (inWheelView ? 4.0 : 0);
+  const targetCamY = inWheelView ? 2.5 : 1.5;
+  smoothCamX += (targetCamX - smoothCamX) * 0.05;
+  smoothCamY += (targetCamY - smoothCamY) * 0.05;
 
   camera.position.x = smoothCamX + Math.sin(time * 0.15) * 0.3 + cameraShake.x;
   camera.position.y = smoothCamY + Math.sin(time * 0.1) * 0.15 + cameraShake.y;
