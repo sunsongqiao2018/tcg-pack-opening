@@ -15,10 +15,10 @@ const RARITY_LIGHT = {
 
 // Base opacity for foil per rarity (tweened to after reveal)
 export const FOIL_OPACITY = {
-  legendary: 0.28,
-  rare: 0.20,
-  uncommon: 0.16,
-  common: 0.14,
+  legendary: 0.14,
+  rare: 0.18,
+  uncommon: 0.10,
+  common: 0.07,
 };
 
 const _backTex = { value: null };
@@ -43,6 +43,7 @@ void main() {
 const FOIL_FRAG = /* glsl */`
 uniform float uTime;
 uniform float uOpacity;
+uniform float uIsLegendary;
 varying vec2 vUv;
 varying vec3 vNormal;
 varying vec3 vViewDir;
@@ -52,32 +53,48 @@ vec3 hue2rgb(float h) {
   return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
 }
 
+float hash21(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
 void main() {
   float ndotv = max(dot(normalize(vNormal), normalize(vViewDir)), 0.0);
   float fresnel = 1.0 - ndotv;
 
-  // Diagonal rainbow bands
-  float diag = vUv.x + vUv.y;
-  float stripe = sin(diag * 14.0 - uTime * 2.5) * 0.5 + 0.5;
+  // Art-area mask: UV y 0.48–0.90 = art box in card texture.
+  // Non-legendary (Pokemon holo rare): foil only in art area → text stays crisp.
+  // Legendary (Pokemon full-art / secret rare): foil covers entire card.
+  float artMask = smoothstep(0.46, 0.50, vUv.y) * smoothstep(0.92, 0.88, vUv.y);
+  float mask = mix(artMask, 1.0, uIsLegendary);
 
-  // Fine horizontal scan lines for foil grain
-  float scan = sin(vUv.y * 28.0 + uTime * 3.5) * 0.5 + 0.5;
+  // Fine diagonal rainbow bands (Pokemon TCG prismatic foil)
+  float diag = vUv.x * 0.7 + vUv.y * 0.9;
+  float stripe1 = sin(diag * 14.0 + uTime * 1.8) * 0.5 + 0.5;
+  float stripe2 = sin(diag * 5.0 - uTime * 1.0 + vUv.x * 2.5) * 0.5 + 0.5;
 
-  // Hue shifts with UV position, time, tilt (fresnel), and stripe
-  float hue = diag * 0.45 + uTime * 0.055 + fresnel * 0.55 + stripe * 0.07;
+  // Hue from UV position + time + tilt
+  float hue = diag * 0.45 + uTime * 0.035 + fresnel * 0.65;
   vec3 rainbow = hue2rgb(hue);
 
-  // Specular flash at glancing angles
-  float spec = pow(fresnel, 2.5) * 1.2;
-  vec3 col = rainbow + vec3(spec);
+  // Star sparkles (Pokemon TCG style — small bright twinkling points)
+  vec2 grid = vUv * 20.0;
+  vec2 cell = floor(grid);
+  vec2 cellUv = fract(grid) - 0.5;
+  float h = hash21(cell);
+  float pulse = max(0.0, cos(uTime * (0.6 + h * 1.5) + h * 6.28));
+  float sparkle = step(0.75, h) * pulse * max(0.0, 1.0 - length(cellUv) * 8.0);
 
-  // Brightness from scan lines + tilt
-  float brightness = 0.72 + scan * 0.20 + fresnel * 0.35;
-  col *= brightness;
+  // Color: rainbow bands + bright sparkle flashes + edge glimmer on tilt
+  vec3 col = rainbow * (0.5 + stripe1 * 0.3 + stripe2 * 0.08);
+  col += vec3(sparkle * 2.0);
+  col += vec3(pow(fresnel, 2.5) * 0.35);
 
-  // Alpha must be visible at rest (fresnel≈0) — use stripe animation as base, fresnel only boosts
-  float alpha = uOpacity * (0.85 + stripe * 0.28 + fresnel * 0.45);
-  gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.72));
+  // Alpha: subtle at rest, boosted by sparkle and tilt; masked to art zone
+  float alpha = uOpacity * (0.55 + stripe1 * 0.28 + fresnel * 0.45);
+  alpha += sparkle * uOpacity * 1.2;
+  alpha *= mask;
+
+  gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.80));
 }
 `;
 
@@ -137,6 +154,7 @@ export class Card {
     this.foilUniforms = {
       uTime: { value: 0 },
       uOpacity: { value: 0 },
+      uIsLegendary: { value: isLegendary ? 1.0 : 0.0 },
     };
     const foilMat = new THREE.ShaderMaterial({
       uniforms: this.foilUniforms,
