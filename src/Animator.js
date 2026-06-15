@@ -1,19 +1,7 @@
 import gsap from 'gsap';
 import { playLegendaryBuildUp } from './sound.js';
 
-// 1-column × 10-row layout — clear vertical stack, no overlap
-const FAN_POSITIONS = [
-  { x: 0, y:  6.75, z: 0, rotZ: 0 },
-  { x: 0, y:  5.25, z: 0, rotZ: 0 },
-  { x: 0, y:  3.75, z: 0, rotZ: 0 },
-  { x: 0, y:  2.25, z: 0, rotZ: 0 },
-  { x: 0, y:  0.75, z: 0, rotZ: 0 },
-  { x: 0, y: -0.75, z: 0, rotZ: 0 },
-  { x: 0, y: -2.25, z: 0, rotZ: 0 },
-  { x: 0, y: -3.75, z: 0, rotZ: 0 },
-  { x: 0, y: -5.25, z: 0, rotZ: 0 },
-  { x: 0, y: -6.75, z: 0, rotZ: 0 },
-];
+export const WHEEL_RADIUS = 3.5;
 
 const RARITY_OPTS = {
   common:    { scale: 1.55, pause: 0,   flipDuration: 0.15, approachDuration: 0.38 },
@@ -21,6 +9,11 @@ const RARITY_OPTS = {
   rare:      { scale: 1.75, pause: 0.3, flipDuration: 0.2,  approachDuration: 0.45 },
   legendary: { scale: 2.0,  pause: 0.9, flipDuration: 0.25, approachDuration: 0.6  },
 };
+
+// Scale based on wheel position: front=0.48, back=0.32
+function slotScale(theta) {
+  return 0.32 + 0.08 * (1 + Math.cos(theta));
+}
 
 export function idlePackAnimation(packGroup) {
   return gsap.to(packGroup.rotation, {
@@ -57,58 +50,60 @@ export function openPackAnimation(packGroup, onExplode) {
 
 export function dealCardsAnimation(cards, fromPos = { x: 0, y: 1.8, z: 0 }) {
   return new Promise(resolve => {
+    const N = cards.length;
     const promises = cards.map((card, i) => new Promise(cardResolve => {
-      const pos = FAN_POSITIONS[i];
+      const theta = (2 * Math.PI / N) * i;
+      const tx = WHEEL_RADIUS * Math.sin(theta);
+      const tz = WHEEL_RADIUS * Math.cos(theta);
+      const targetRotY = Math.PI - theta;
+      const s = slotScale(theta);
 
       card.group.position.set(fromPos.x, fromPos.y, fromPos.z);
       card.group.rotation.set(0, Math.PI, 0);
       card.group.scale.set(0.05, 0.05, 0.05);
 
       const delay = i * 0.07;
-      gsap.to(card.group.scale, { x: 0.48, y: 0.48, z: 0.48, duration: 0.4, delay, ease: 'back.out(2.5)' });
+      gsap.to(card.group.scale, { x: s, y: s, z: s, duration: 0.4, delay, ease: 'back.out(2.5)' });
 
       const arcPeakY = fromPos.y + 3.5;
       const tl = gsap.timeline({ delay });
       tl.to(card.group.position, {
-        x: fromPos.x + (pos.x - fromPos.x) * 0.3, y: arcPeakY, z: pos.z * 0.4,
+        x: fromPos.x + (tx - fromPos.x) * 0.3, y: arcPeakY, z: tz * 0.4,
         duration: 0.28, ease: 'power2.out',
       })
       .to(card.group.position, {
-        x: pos.x, y: pos.y, z: pos.z,
+        x: tx, y: 0, z: tz,
         duration: 0.38, ease: 'power3.in', onComplete: cardResolve,
       });
 
       gsap.to(card.group.rotation, {
-        y: Math.PI + Math.PI * 4, z: pos.rotZ,
+        y: Math.PI * 4 + targetRotY,
         duration: 0.66, delay, ease: 'power2.inOut',
-        onComplete: () => gsap.set(card.group.rotation, { y: Math.PI }),
+        onComplete: () => gsap.set(card.group.rotation, { y: targetRotY }),
       });
     }));
     Promise.all(promises).then(resolve);
   });
 }
 
-// options can override rarity defaults; onPreFlip fires before flip, onRevealed fires after
 export function revealCardAnimation(card, options = {}) {
   const defaults = RARITY_OPTS[card.data.rarity] || RARITY_OPTS.common;
   const {
-    scale           = defaults.scale,
-    pause           = defaults.pause,
-    flipDuration    = defaults.flipDuration,
+    scale            = defaults.scale,
+    pause            = defaults.pause,
+    flipDuration     = defaults.flipDuration,
     approachDuration = defaults.approachDuration,
-    onPreFlip       = null,
-    onRevealed      = null,
+    onPreFlip        = null,
+    onRevealed       = null,
   } = options;
 
   return new Promise(resolve => {
     const tl = gsap.timeline({ onComplete: resolve });
 
-    // Approach: reset parallax tilt (x) and fan tilt (z), leave y alone for flip
     tl.to(card.group.position, { x: 0, y: 0.5, z: 3.8, duration: approachDuration, ease: 'power3.out' })
       .to(card.group.rotation, { x: 0, z: 0, duration: approachDuration * 0.84, ease: 'power3.out' }, '<')
       .to(card.group.scale, { x: scale, y: scale, z: scale, duration: approachDuration, ease: 'back.out(1.8)' }, '<');
 
-    // Dramatic pause with build-up for legendary/rare
     if (pause > 0) {
       let stopBuildUp = null;
       if (card.data.rarity === 'legendary') {
@@ -120,7 +115,6 @@ export function revealCardAnimation(card, options = {}) {
 
     if (onPreFlip) tl.call(onPreFlip);
 
-    // Punchy flip
     const punch = scale * 1.097;
     tl.to(card.group.rotation, { y: Math.PI * 0.5, duration: flipDuration, ease: 'power3.in' })
       .to(card.group.scale, { x: punch, y: punch, z: punch, duration: flipDuration * 0.47, ease: 'power2.out' }, `<${flipDuration * 0.67}`)
@@ -135,23 +129,23 @@ export function revealCardAnimation(card, options = {}) {
   });
 }
 
-export function returnCardAnimation(card, index) {
+export function returnCardAnimation(card, index, total, wheelAngle) {
+  const theta = (2 * Math.PI / total) * index + wheelAngle;
+  const s = slotScale(theta);
+
   return new Promise(resolve => {
-    const pos = FAN_POSITIONS[index];
     const tl = gsap.timeline({ onComplete: resolve });
 
     if (card.glowPlane) tl.to(card.glowPlane.material, { opacity: 0, duration: 0.2 });
     if (card.foilUniforms) tl.to(card.foilUniforms.uOpacity, { value: 0, duration: 0.2 }, '<');
 
-    tl.to(card.group.position, { x: pos.x, y: pos.y, z: pos.z, duration: 0.4, ease: 'power2.inOut' })
-      .to(card.group.rotation, { x: 0, z: pos.rotZ, duration: 0.3, ease: 'power2.inOut' }, '<')
-      .to(card.group.scale, { x: 0.48, y: 0.48, z: 0.48, duration: 0.3, ease: 'power2.inOut' }, '<');
-  });
-}
-
-export function hoverCardAnimation(card, isHover) {
-  gsap.to(card.group.position, {
-    y: card.group.position.y + (isHover ? 0.4 : -0.4),
-    duration: 0.2, ease: 'power2.out', overwrite: 'auto',
+    tl.to(card.group.position, {
+      x: WHEEL_RADIUS * Math.sin(theta),
+      y: 0,
+      z: WHEEL_RADIUS * Math.cos(theta),
+      duration: 0.4, ease: 'power2.inOut',
+    })
+    .to(card.group.rotation, { x: 0, y: Math.PI - theta, z: 0, duration: 0.3, ease: 'power2.inOut' }, '<')
+    .to(card.group.scale, { x: s, y: s, z: s, duration: 0.3, ease: 'power2.inOut' }, '<');
   });
 }

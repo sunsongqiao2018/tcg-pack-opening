@@ -6,13 +6,13 @@ import { Pack } from './Pack.js';
 import { Card, FOIL_OPACITY } from './Card.js';
 import { PACK_CARDS } from './cardData.js';
 import {
+  WHEEL_RADIUS,
   idlePackAnimation,
   packIntroAnimation,
   openPackAnimation,
   dealCardsAnimation,
   revealCardAnimation,
   returnCardAnimation,
-  hoverCardAnimation,
 } from './Animator.js';
 import {
   resumeAudio,
@@ -22,7 +22,7 @@ import {
   playReveal,
 } from './sound.js';
 
-// --- Art image preloader (starts at module load so images are ready before pack open) ---
+// --- Art image preloader ---
 function loadArtImage(url) {
   if (!url) return Promise.resolve(null);
   return new Promise(resolve => {
@@ -46,7 +46,6 @@ let pack = null;
 let cards = [];
 let selectedCard = null;
 let idleAnim = null;
-let hoveredCard = null;
 
 // --- DOM ---
 const canvas = document.getElementById('canvas');
@@ -137,9 +136,67 @@ function burstParticles(origin) {
   particleMat.opacity = 1.0;
 }
 
-// --- Swipe-to-tear state ---
+// --- Pack swipe state ---
 let swipeStartX = null;
 let isSwiping = false;
+
+// --- Wheel state ---
+const wheelState = { angle: 0 };
+let isDraggingWheel = false;
+let wheelDragStartX = 0;
+let wheelDragStartAngle = 0;
+let wheelDragTotal = 0;
+let frontCardIndex = 0;
+
+function updateWheelPositions() {
+  const N = cards.length;
+  if (!N) return;
+
+  // Find front card (effective theta closest to 0)
+  let minDist = Infinity;
+  let fi = 0;
+  for (let i = 0; i < N; i++) {
+    const theta = (2 * Math.PI / N) * i + wheelState.angle;
+    const norm = ((theta % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    const dist = norm > Math.PI ? 2 * Math.PI - norm : norm;
+    if (dist < minDist) { minDist = dist; fi = i; }
+  }
+  frontCardIndex = fi;
+
+  for (let i = 0; i < N; i++) {
+    const card = cards[i];
+    if (card.isSelected) continue;
+    const theta = (2 * Math.PI / N) * i + wheelState.angle;
+    const cosT = Math.cos(theta);
+    const s = 0.32 + 0.08 * (1 + cosT);
+    const extraZ = i === fi ? 0.25 : 0;
+    card.group.position.set(
+      WHEEL_RADIUS * Math.sin(theta),
+      0,
+      WHEEL_RADIUS * Math.cos(theta) + extraZ,
+    );
+    card.group.rotation.y = Math.PI - theta;
+    card.group.scale.set(s, s, s);
+  }
+}
+
+function snapWheel() {
+  const N = cards.length;
+  const step = 2 * Math.PI / N;
+  const fi = frontCardIndex;
+  const theta = step * fi + wheelState.angle;
+  const norm = ((theta % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  const deviation = norm > Math.PI ? norm - 2 * Math.PI : norm;
+  const targetAngle = wheelState.angle - deviation;
+
+  gsap.to(wheelState, {
+    angle: targetAngle,
+    duration: 0.4,
+    ease: 'power3.out',
+    onUpdate: updateWheelPositions,
+    overwrite: 'auto',
+  });
+}
 
 // --- Boot ---
 async function boot() {
@@ -182,43 +239,51 @@ async function handlePackOpen() {
   pack.dispose(); pack = null;
   state = STATE.FANNING;
 
+  wheelState.angle = 0;
+  frontCardIndex = 0;
+
   const artImages = await Promise.all(artPromises);
   cards = PACK_CARDS.map((data, i) => new Card(scene, data, i, artImages[i]));
-  // Staggered slide sounds matching deal animation delays
   cards.forEach((_, i) => setTimeout(() => playCardSlide(), i * 70));
   await dealCardsAnimation(cards, burstPos);
 
-  // Activate rarity glow lights staggered
+  // Sync wheel positions (adds front card extraZ offset)
+  updateWheelPositions();
+
   cards.forEach((card, i) => card.showRarityLight(i * 0.07));
 
   state = STATE.IDLE_FAN;
-  setHint('Click a card to reveal');
+  setHint('Drag to spin • Click center card to reveal');
 }
 
 // --- Card reveal ---
 async function handleCardClick(card) {
   if (state !== STATE.IDLE_FAN && state !== STATE.REVEALED) return;
 
+  // Return the already-selected card
   if (card.isSelected) {
     state = STATE.REVEALING;
     card.isSelected = false;
     selectedCard = null;
     if (card.data.rarity === 'legendary') hideOverlay();
-    await returnCardAnimation(card, card.index);
+    await returnCardAnimation(card, card.index, cards.length, wheelState.angle);
     card.restoreRarityLight();
+    updateWheelPositions();
     state = STATE.IDLE_FAN;
-    setHint(cards.every(c => c.isRevealed) ? 'All cards revealed!' : 'Click a card to reveal');
+    setHint(cards.every(c => c.isRevealed) ? 'All cards revealed! Drag to spin' : 'Drag to spin • Click center card to reveal');
     return;
   }
 
+  // Return any previously selected card first
   if (selectedCard) {
     state = STATE.REVEALING;
     const prev = selectedCard;
     prev.isSelected = false;
     selectedCard = null;
     if (prev.data.rarity === 'legendary') hideOverlay();
-    await returnCardAnimation(prev, prev.index);
+    await returnCardAnimation(prev, prev.index, cards.length, wheelState.angle);
     prev.restoreRarityLight();
+    updateWheelPositions();
   }
 
   state = STATE.REVEALING;
@@ -243,13 +308,22 @@ async function handleCardClick(card) {
   });
 
   state = STATE.REVEALED;
-  setHint('Click card again to return');
+  setHint('Click card to return it to the wheel');
 }
 
 // --- Events ---
 
 canvas.addEventListener('mousedown', (e) => {
   resumeAudio();
+
+  if (state === STATE.IDLE_FAN) {
+    wheelDragStartX = e.clientX;
+    wheelDragStartAngle = wheelState.angle;
+    wheelDragTotal = 0;
+    isDraggingWheel = true;
+    return;
+  }
+
   if (state !== STATE.IDLE || !pack) return;
   const hits = getIntersects(e, [pack.meshForRaycasting]);
   if (hits.length > 0) {
@@ -259,6 +333,13 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 canvas.addEventListener('mouseup', (e) => {
+  if (isDraggingWheel) {
+    isDraggingWheel = false;
+    if (wheelDragTotal > 8) snapWheel();
+    canvas.style.cursor = 'grab';
+    return;
+  }
+
   if (!isSwiping) return;
   const dx = e.clientX - (swipeStartX ?? e.clientX);
   isSwiping = false;
@@ -267,13 +348,18 @@ canvas.addEventListener('mouseup', (e) => {
     playTear();
     handlePackOpen();
   } else if (pack && state === STATE.IDLE) {
-    // Spring back if drag wasn't enough
     gsap.to(pack.group.rotation, { z: 0, x: 0, duration: 0.4, ease: 'elastic.out(1.2, 0.5)', overwrite: 'auto' });
     gsap.to(pack.group.scale, { y: 1.0, x: 1.0, duration: 0.35, ease: 'power2.out', overwrite: 'auto' });
   }
 });
 
 canvas.addEventListener('mouseleave', () => {
+  if (isDraggingWheel) {
+    isDraggingWheel = false;
+    snapWheel();
+    canvas.style.cursor = 'default';
+    return;
+  }
   if (isSwiping && pack && state === STATE.IDLE) {
     isSwiping = false;
     swipeStartX = null;
@@ -283,7 +369,17 @@ canvas.addEventListener('mouseleave', () => {
 });
 
 canvas.addEventListener('mousemove', (e) => {
-  // --- Swipe drag feedback ---
+  // Wheel drag
+  if (isDraggingWheel) {
+    const dx = e.clientX - wheelDragStartX;
+    wheelDragTotal = Math.abs(dx);
+    wheelState.angle = wheelDragStartAngle + dx * 0.005;
+    updateWheelPositions();
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
+
+  // Pack swipe drag feedback
   if (isSwiping && state === STATE.IDLE && pack) {
     const dx = e.clientX - swipeStartX;
     pack.group.rotation.z = -dx * 0.003;
@@ -295,24 +391,20 @@ canvas.addEventListener('mousemove', (e) => {
     return;
   }
 
-  // --- Pack hover cursor ---
+  // Pack hover cursor
   if (state === STATE.IDLE && pack && !isSwiping) {
     const hits = getIntersects(e, [pack.meshForRaycasting]);
     canvas.style.cursor = hits.length > 0 ? 'grab' : 'default';
     return;
   }
 
-  // --- Mouse parallax on revealed card ---
+  // Mouse parallax on revealed card
   if (state === STATE.REVEALED && selectedCard) {
     const rect = canvas.getBoundingClientRect();
     const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-    // Direct assignment for smooth parallax (no tween overhead)
     selectedCard.group.rotation.y = nx * 0.2;
     selectedCard.group.rotation.x = -ny * 0.2;
-
-    // Boost foil brightness with tilt distance (shader fresnel handles the color shift)
     if (selectedCard.foilUniforms) {
       const base = FOIL_OPACITY[selectedCard.data.rarity] || FOIL_OPACITY.common;
       const dist = Math.sqrt(nx * nx + ny * ny) / Math.SQRT2;
@@ -320,29 +412,30 @@ canvas.addEventListener('mousemove', (e) => {
     }
   }
 
-  // --- Card hover in fan ---
-  if (state !== STATE.IDLE_FAN) {
-    if (hoveredCard) { hoverCardAnimation(hoveredCard, false); hoveredCard = null; }
-    canvas.style.cursor = 'default';
+  // Wheel cursor: pointer only on front card
+  if (state === STATE.IDLE_FAN) {
+    const fc = cards[frontCardIndex];
+    const hits = fc ? getIntersects(e, [fc.meshForRaycasting]) : [];
+    canvas.style.cursor = hits.length > 0 ? 'pointer' : 'grab';
     return;
   }
 
-  const meshes = cards.map(c => c.meshForRaycasting);
-  const hits = getIntersects(e, meshes);
-  const newHovered = hits.length > 0
-    ? cards.find(c => c.meshForRaycasting === hits[0].object) || null
-    : null;
-
-  if (newHovered !== hoveredCard) {
-    if (hoveredCard && !hoveredCard.isSelected) hoverCardAnimation(hoveredCard, false);
-    if (newHovered && !newHovered.isSelected) hoverCardAnimation(newHovered, true);
-    hoveredCard = newHovered;
-  }
-  canvas.style.cursor = newHovered ? 'pointer' : 'default';
+  canvas.style.cursor = 'default';
 });
 
 canvas.addEventListener('click', (e) => {
-  if (state === STATE.IDLE_FAN || state === STATE.REVEALED) {
+  // Wheel: reveal front card on click (only if it wasn't a drag)
+  if (state === STATE.IDLE_FAN) {
+    if (wheelDragTotal > 8) { wheelDragTotal = 0; return; }
+    const fc = cards[frontCardIndex];
+    if (!fc) return;
+    const hits = getIntersects(e, [fc.meshForRaycasting]);
+    if (hits.length > 0) handleCardClick(fc);
+    return;
+  }
+
+  // Return revealed card on click
+  if (state === STATE.REVEALED) {
     const meshes = cards.map(c => c.meshForRaycasting);
     const hits = getIntersects(e, meshes);
     if (hits.length > 0) {
@@ -370,7 +463,6 @@ function animate() {
     if (pack.glowLight) pack.glowLight.intensity = 4 + Math.sin(time * 2.8) * 2.5;
   }
 
-  // Advance holographic foil shader time
   for (const card of cards) {
     if (card.foilUniforms) card.foilUniforms.uTime.value = time;
   }
