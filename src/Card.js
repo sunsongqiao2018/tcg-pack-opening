@@ -131,13 +131,15 @@ export class Card {
 
     // Legendary inner glow plane
     if (isLegendary) {
-      const glowMat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(data.accentColor),
-        emissive: new THREE.Color(data.accentColor),
-        emissiveIntensity: 0.6,
-        transparent: true, opacity: 0.0, roughness: 0.0,
+      const glowTex = this._makeGlowTexture(data.accentColor);
+      const glowMat = new THREE.MeshBasicMaterial({
+        map: glowTex,
+        transparent: true,
+        opacity: 0.0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
       });
-      const glowGeo = new THREE.PlaneGeometry(CARD_W + 0.3, CARD_H + 0.3);
+      const glowGeo = new THREE.PlaneGeometry(CARD_W + 1.2, CARD_H + 1.2);
       this.glowPlane = new THREE.Mesh(glowGeo, glowMat);
       this.glowPlane.position.z = CARD_DEPTH / 2 + 0.005;
       this.group.add(this.glowPlane);
@@ -202,6 +204,32 @@ export class Card {
 
   hideFoil() {
     gsap.to(this.foilUniforms.uOpacity, { value: 0, duration: 0.25, ease: 'power2.in' });
+  }
+
+  _makeGlowTexture(hexColor) {
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    const color = new THREE.Color(hexColor);
+    const r = Math.round(color.r * 255);
+    const g = Math.round(color.g * 255);
+    const b = Math.round(color.b * 255);
+
+    const cx = size / 2, cy = size / 2;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, size / 2);
+    grad.addColorStop(0.0, `rgba(${r},${g},${b},1.0)`);
+    grad.addColorStop(0.35, `rgba(${r},${g},${b},0.7)`);
+    grad.addColorStop(0.65, `rgba(${r},${g},${b},0.3)`);
+    grad.addColorStop(1.0, `rgba(${r},${g},${b},0.0)`);
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
   }
 
   showGlow(intensity = 0.4) {
