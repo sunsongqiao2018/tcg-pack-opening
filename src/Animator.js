@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import { playLegendaryBuildUp } from './sound.js';
 
-export const WHEEL_RADIUS = 3.5;
+export const WHEEL_RADIUS = 3.0;
 
 const RARITY_OPTS = {
   common:    { scale: 1.55, pause: 0,   flipDuration: 0.15, approachDuration: 0.38 },
@@ -10,9 +10,9 @@ const RARITY_OPTS = {
   legendary: { scale: 2.0,  pause: 0.9, flipDuration: 0.25, approachDuration: 0.6  },
 };
 
-// Scale based on wheel position: front=0.48, back=0.32
+// Scale based on wheel position: front=0.68, back=0.42
 function slotScale(theta) {
-  return 0.32 + 0.08 * (1 + Math.cos(theta));
+  return 0.42 + 0.13 * (1 + Math.cos(theta));
 }
 
 export function idlePackAnimation(packGroup) {

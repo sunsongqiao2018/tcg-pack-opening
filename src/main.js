@@ -168,7 +168,7 @@ function updateWheelPositions() {
     if (card.isSelected) continue;
     const theta = (2 * Math.PI / N) * i + wheelState.angle;
     const cosT = Math.cos(theta);
-    const s = 0.32 + 0.08 * (1 + cosT);
+    const s = 0.42 + 0.13 * (1 + cosT);
     const extraZ = i === fi ? 0.25 : 0;
     card.group.position.set(
       0,
@@ -448,12 +448,18 @@ canvas.addEventListener('click', (e) => {
 
 // --- Render loop ---
 let time = 0;
+let smoothCamX = 0, smoothCamY = 1.5;
+
 function animate() {
   requestAnimationFrame(animate);
   time += 0.016;
 
-  camera.position.x = Math.sin(time * 0.15) * 0.3 + cameraShake.x;
-  camera.position.y = 1.5 + Math.sin(time * 0.1) * 0.15 + cameraShake.y;
+  const inWheelView = state === STATE.IDLE_FAN || state === STATE.REVEALING || state === STATE.REVEALED;
+  smoothCamX += ((inWheelView ? 4.0 : 0) - smoothCamX) * 0.05;
+  smoothCamY += ((inWheelView ? 2.5 : 1.5) - smoothCamY) * 0.05;
+
+  camera.position.x = smoothCamX + Math.sin(time * 0.15) * 0.3 + cameraShake.x;
+  camera.position.y = smoothCamY + Math.sin(time * 0.1) * 0.15 + cameraShake.y;
   camera.lookAt(0, 0, 0);
 
   if (pack) {
