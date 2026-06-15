@@ -144,6 +144,13 @@ let isSwiping = false;
 let touchStartX = 0;
 let touchStartY = 0;
 
+// --- Card examine drag state ---
+let isCardDragging = false;
+let cardDragStartX = 0;
+let cardDragMoved = false;
+let suppressNextClick = false;
+const MAX_CARD_ROTATE = 15 * Math.PI / 180;
+
 // --- Wheel state ---
 const wheelState = { angle: 0 };
 let isDraggingWheel = false;
@@ -327,6 +334,13 @@ async function handleCardClick(card) {
 canvas.addEventListener('mousedown', (e) => {
   resumeAudio();
 
+  if (state === STATE.REVEALED && selectedCard) {
+    isCardDragging = true;
+    cardDragStartX = e.clientX;
+    cardDragMoved = false;
+    return;
+  }
+
   if (state === STATE.IDLE_FAN) {
     wheelDragStartY = e.clientY;
     wheelDragStartAngle = wheelState.angle;
@@ -344,6 +358,15 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 canvas.addEventListener('mouseup', (e) => {
+  if (isCardDragging) {
+    isCardDragging = false;
+    if (cardDragMoved && selectedCard) {
+      suppressNextClick = true;
+      gsap.to(selectedCard.group.rotation, { y: 0, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
+    }
+    return;
+  }
+
   if (isDraggingWheel) {
     isDraggingWheel = false;
     if (wheelDragTotal > 8) snapWheel();
@@ -365,6 +388,14 @@ canvas.addEventListener('mouseup', (e) => {
 });
 
 canvas.addEventListener('mouseleave', () => {
+  if (isCardDragging) {
+    isCardDragging = false;
+    if (selectedCard) {
+      gsap.to(selectedCard.group.rotation, { y: 0, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
+    }
+    return;
+  }
+
   if (isDraggingWheel) {
     isDraggingWheel = false;
     snapWheel();
@@ -409,18 +440,25 @@ canvas.addEventListener('mousemove', (e) => {
     return;
   }
 
-  // Mouse parallax on revealed card
+  // Card examine drag / foil shimmer on revealed card
   if (state === STATE.REVEALED && selectedCard) {
-    const rect = canvas.getBoundingClientRect();
-    const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    selectedCard.group.rotation.y = nx * 0.2;
-    selectedCard.group.rotation.x = -ny * 0.2;
+    if (isCardDragging) {
+      const dx = e.clientX - cardDragStartX;
+      if (Math.abs(dx) > 3) cardDragMoved = true;
+      selectedCard.group.rotation.y = Math.max(-MAX_CARD_ROTATE, Math.min(MAX_CARD_ROTATE, dx * 0.003));
+      canvas.style.cursor = 'grabbing';
+    } else {
+      canvas.style.cursor = 'grab';
+    }
     if (selectedCard.foilUniforms) {
+      const rect = canvas.getBoundingClientRect();
+      const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       const base = FOIL_OPACITY[selectedCard.data.rarity] || FOIL_OPACITY.common;
       const dist = Math.sqrt(nx * nx + ny * ny) / Math.SQRT2;
       selectedCard.foilUniforms.uOpacity.value = base + dist * 0.18;
     }
+    return;
   }
 
   // Wheel cursor: pointer only on front card
@@ -435,6 +473,8 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 canvas.addEventListener('click', (e) => {
+  if (suppressNextClick) { suppressNextClick = false; return; }
+
   // Wheel: reveal front card on click (only if it wasn't a drag)
   if (state === STATE.IDLE_FAN) {
     if (wheelDragTotal > 8) { wheelDragTotal = 0; return; }
@@ -466,6 +506,13 @@ canvas.addEventListener('touchstart', (e) => {
 
   resumeAudio();
 
+  if (state === STATE.REVEALED && selectedCard) {
+    isCardDragging = true;
+    cardDragStartX = touch.clientX;
+    cardDragMoved = false;
+    return;
+  }
+
   if (state === STATE.IDLE_FAN) {
     wheelDragStartY = touch.clientY;
     wheelDragStartAngle = wheelState.angle;
@@ -485,6 +532,13 @@ canvas.addEventListener('touchstart', (e) => {
 canvas.addEventListener('touchmove', (e) => {
   e.preventDefault();
   const touch = e.touches[0];
+
+  if (isCardDragging && state === STATE.REVEALED && selectedCard) {
+    const dx = touch.clientX - cardDragStartX;
+    if (Math.abs(dx) > 3) cardDragMoved = true;
+    selectedCard.group.rotation.y = Math.max(-MAX_CARD_ROTATE, Math.min(MAX_CARD_ROTATE, dx * 0.003));
+    return;
+  }
 
   if (isDraggingWheel) {
     const dy = touch.clientY - wheelDragStartY;
@@ -510,6 +564,14 @@ canvas.addEventListener('touchend', (e) => {
   const movedX = touch.clientX - touchStartX;
   const movedY = touch.clientY - touchStartY;
   const moved = Math.sqrt(movedX * movedX + movedY * movedY);
+
+  if (isCardDragging) {
+    isCardDragging = false;
+    if (cardDragMoved && selectedCard) {
+      gsap.to(selectedCard.group.rotation, { y: 0, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
+      return;
+    }
+  }
 
   if (isDraggingWheel) {
     isDraggingWheel = false;
@@ -556,6 +618,14 @@ canvas.addEventListener('touchend', (e) => {
 }, { passive: false });
 
 canvas.addEventListener('touchcancel', () => {
+  if (isCardDragging) {
+    isCardDragging = false;
+    if (selectedCard) {
+      gsap.to(selectedCard.group.rotation, { y: 0, duration: 0.5, ease: 'elastic.out(1.1, 0.6)', overwrite: 'auto' });
+    }
+    return;
+  }
+
   if (isDraggingWheel) {
     isDraggingWheel = false;
     snapWheel();
