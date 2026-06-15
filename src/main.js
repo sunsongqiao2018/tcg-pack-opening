@@ -236,7 +236,6 @@ async function handlePackOpen() {
   let burstPos = { x: 0, y: 1.8, z: 0 };
   await openPackAnimation(pack.group, (pos) => {
     burstPos = { x: pos.x, y: pos.y, z: pos.z };
-    triggerFlash();
     triggerCameraShake();
     burstParticles(pos);
   });

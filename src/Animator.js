@@ -42,9 +42,14 @@ export function openPackAnimation(packGroup, onExplode) {
     tl.to(packGroup.scale, { x: 1.25, y: 1.25, z: 1.25, duration: 0.13, ease: 'power3.out' });
     tl.to(packGroup.scale, { x: 0.9, y: 0.9, z: 0.9, duration: 0.09, ease: 'power2.in' });
 
+    // Swoop pack toward camera and slide down
+    tl.to(packGroup.position, { y: -0.8, z: 4.5, duration: 0.38, ease: 'power3.inOut' });
+    tl.to(packGroup.rotation, { x: 0.18, y: 0, z: 0, duration: 0.38, ease: 'power2.inOut' }, '<');
+    tl.to(packGroup.scale, { x: 1.3, y: 1.3, z: 1.3, duration: 0.38, ease: 'power2.out' }, '<');
+
+    // Fire burst at the close position, then pack vanishes
     tl.call(() => onExplode && onExplode(packGroup.position.clone()));
-    tl.to(packGroup.scale, { x: 4.0, y: 0.0, z: 4.0, duration: 0.22, ease: 'power4.in' });
-    tl.to(packGroup.rotation, { z: 0.8, duration: 0.22 }, '<');
+    tl.to(packGroup.scale, { x: 0.01, y: 0.01, z: 0.01, duration: 0.2, ease: 'power3.in' });
   });
 }
 
@@ -55,15 +60,17 @@ export function dealCardsAnimation(cards, fromPos = { x: 0, y: 1.8, z: 0 }) {
       const theta = (2 * Math.PI / N) * i;
       const ty = WHEEL_RADIUS * Math.sin(theta);
       const tz = WHEEL_RADIUS * Math.cos(theta);
-      const targetRotX = 0;
       const s = slotScale(theta);
 
       card.group.position.set(fromPos.x, fromPos.y, fromPos.z);
       card.group.rotation.set(0, Math.PI, 0);
       card.group.scale.set(0.05, 0.05, 0.05);
 
-      const delay = i * 0.07;
-      gsap.to(card.group.scale, { x: s, y: s, z: s, duration: 0.4, delay, ease: 'back.out(2.5)' });
+      const delay = i * 0.09;
+
+      // Punch overshoot then settle — feels like card bursting out of the pack
+      gsap.to(card.group.scale, { x: s * 1.2, y: s * 1.2, z: s * 1.2, duration: 0.2, delay, ease: 'power3.out' });
+      gsap.to(card.group.scale, { x: s, y: s, z: s, duration: 0.38, delay: delay + 0.2, ease: 'back.out(2)' });
 
       const tl = gsap.timeline({ delay });
       tl.to(card.group.position, {
@@ -78,7 +85,7 @@ export function dealCardsAnimation(cards, fromPos = { x: 0, y: 1.8, z: 0 }) {
       gsap.to(card.group.rotation, {
         y: Math.PI * 4 + Math.PI,
         duration: 0.66, delay, ease: 'power2.inOut',
-        onComplete: () => gsap.set(card.group.rotation, { x: targetRotX, y: Math.PI }),
+        onComplete: () => gsap.set(card.group.rotation, { x: 0, y: Math.PI }),
       });
     }));
     Promise.all(promises).then(resolve);
