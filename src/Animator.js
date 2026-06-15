@@ -94,31 +94,38 @@ export function revealCardAnimation(card, options = {}) {
     approachDuration = defaults.approachDuration,
     onPreFlip        = null,
     onRevealed       = null,
+    skipFlip         = false,
   } = options;
 
   return new Promise(resolve => {
     const tl = gsap.timeline({ onComplete: resolve });
 
+    const approachRot = skipFlip
+      ? { x: 0, y: 0, z: 0, duration: approachDuration * 0.84, ease: 'power3.out' }
+      : { x: 0, z: 0, duration: approachDuration * 0.84, ease: 'power3.out' };
+
     tl.to(card.group.position, { x: 0, y: 0.5, z: 3.8, duration: approachDuration, ease: 'power3.out' })
-      .to(card.group.rotation, { x: 0, z: 0, duration: approachDuration * 0.84, ease: 'power3.out' }, '<')
+      .to(card.group.rotation, approachRot, '<')
       .to(card.group.scale, { x: scale, y: scale, z: scale, duration: approachDuration, ease: 'back.out(1.8)' }, '<');
 
-    if (pause > 0) {
-      let stopBuildUp = null;
-      if (card.data.rarity === 'legendary') {
-        tl.call(() => { stopBuildUp = playLegendaryBuildUp(); });
+    if (!skipFlip) {
+      if (pause > 0) {
+        let stopBuildUp = null;
+        if (card.data.rarity === 'legendary') {
+          tl.call(() => { stopBuildUp = playLegendaryBuildUp(); });
+        }
+        tl.to({}, { duration: pause });
+        tl.call(() => { if (stopBuildUp) stopBuildUp(); });
       }
-      tl.to({}, { duration: pause });
-      tl.call(() => { if (stopBuildUp) stopBuildUp(); });
+
+      if (onPreFlip) tl.call(onPreFlip);
+
+      const punch = scale * 1.097;
+      tl.to(card.group.rotation, { y: Math.PI * 0.5, duration: flipDuration, ease: 'power3.in' })
+        .to(card.group.scale, { x: punch, y: punch, z: punch, duration: flipDuration * 0.47, ease: 'power2.out' }, `<${flipDuration * 0.67}`)
+        .to(card.group.rotation, { y: 0, duration: flipDuration, ease: 'power3.out' })
+        .to(card.group.scale, { x: scale, y: scale, z: scale, duration: flipDuration, ease: 'back.out(2.5)' }, '<');
     }
-
-    if (onPreFlip) tl.call(onPreFlip);
-
-    const punch = scale * 1.097;
-    tl.to(card.group.rotation, { y: Math.PI * 0.5, duration: flipDuration, ease: 'power3.in' })
-      .to(card.group.scale, { x: punch, y: punch, z: punch, duration: flipDuration * 0.47, ease: 'power2.out' }, `<${flipDuration * 0.67}`)
-      .to(card.group.rotation, { y: 0, duration: flipDuration, ease: 'power3.out' })
-      .to(card.group.scale, { x: scale, y: scale, z: scale, duration: flipDuration, ease: 'back.out(2.5)' }, '<');
 
     if (onRevealed) tl.call(onRevealed);
 
@@ -135,16 +142,13 @@ export function returnCardAnimation(card, index, total, wheelAngle) {
   return new Promise(resolve => {
     const tl = gsap.timeline({ onComplete: resolve });
 
-    if (card.glowPlane) tl.to(card.glowPlane.material, { opacity: 0, duration: 0.2 });
-    if (card.foilUniforms) tl.to(card.foilUniforms.uOpacity, { value: 0, duration: 0.2 }, '<');
-
     tl.to(card.group.position, {
       x: 0,
       y: WHEEL_RADIUS * Math.sin(theta),
       z: WHEEL_RADIUS * Math.cos(theta),
       duration: 0.4, ease: 'power2.inOut',
     })
-    .to(card.group.rotation, { x: 0, y: Math.PI, z: 0, duration: 0.3, ease: 'power2.inOut' }, '<')
+    .to(card.group.rotation, { x: 0, y: 0, z: 0, duration: 0.3, ease: 'power2.inOut' }, '<')
     .to(card.group.scale, { x: s, y: s, z: s, duration: 0.3, ease: 'power2.inOut' }, '<');
   });
 }

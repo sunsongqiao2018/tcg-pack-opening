@@ -176,7 +176,7 @@ function updateWheelPositions() {
       WHEEL_RADIUS * Math.cos(theta) + extraZ,
     );
     card.group.rotation.x = 0;
-    card.group.rotation.y = Math.PI;
+    card.group.rotation.y = card.isRevealed ? 0 : Math.PI;
     card.group.scale.set(s, s, s);
   }
 }
@@ -287,6 +287,8 @@ async function handleCardClick(card) {
     updateWheelPositions();
   }
 
+  const wasAlreadyRevealed = card.isRevealed;
+
   state = STATE.REVEALING;
   card.isSelected = true;
   card.isRevealed = true;
@@ -296,13 +298,18 @@ async function handleCardClick(card) {
   const isLegendary = card.data.rarity === 'legendary';
 
   await revealCardAnimation(card, {
-    onPreFlip: () => playFlip(card.data.rarity),
+    skipFlip: wasAlreadyRevealed,
+    onPreFlip: wasAlreadyRevealed ? null : () => playFlip(card.data.rarity),
     onRevealed: () => {
-      playReveal(card.data.rarity);
-      if (isLegendary) {
+      if (!wasAlreadyRevealed) {
+        playReveal(card.data.rarity);
+        if (isLegendary) {
+          showOverlay();
+          burstParticles(new THREE.Vector3(0, 0.5, 3.8));
+          triggerFlash();
+        }
+      } else if (isLegendary) {
         showOverlay();
-        burstParticles(new THREE.Vector3(0, 0.5, 3.8));
-        triggerFlash();
       }
       card.showFoil();
     },
