@@ -514,8 +514,11 @@ canvas.addEventListener('touchend', (e) => {
 
   if (isDraggingWheel) {
     isDraggingWheel = false;
-    if (wheelDragTotal > 8) snapWheel();
-    return;
+    if (wheelDragTotal > 8) {
+      snapWheel();
+      return;
+    }
+    // wheelDragTotal <= 8 means it was a tap — fall through to tap handling
   }
 
   if (isSwiping) {
