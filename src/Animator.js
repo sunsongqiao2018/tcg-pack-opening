@@ -2,11 +2,16 @@ import gsap from 'gsap';
 import { playLegendaryBuildUp } from './sound.js';
 
 const FAN_POSITIONS = [
-  { x: -4.0, y: -0.5, z: 0.5, rotZ: 0.12 },
-  { x: -2.0, y: 0.0,  z: 0.8, rotZ: 0.05 },
-  { x:  0.0, y: 0.2,  z: 1.0, rotZ: 0.0  },
-  { x:  2.0, y: 0.0,  z: 0.8, rotZ: -0.05 },
-  { x:  4.0, y: -0.5, z: 0.5, rotZ: -0.12 },
+  { x: -5.4, y: -0.5, z: 0.2,  rotZ:  0.24 },
+  { x: -4.2, y: -0.3, z: 0.5,  rotZ:  0.19 },
+  { x: -3.0, y:  0.0, z: 0.75, rotZ:  0.13 },
+  { x: -1.8, y:  0.1, z: 0.9,  rotZ:  0.08 },
+  { x: -0.6, y:  0.2, z: 1.0,  rotZ:  0.03 },
+  { x:  0.6, y:  0.2, z: 1.0,  rotZ: -0.03 },
+  { x:  1.8, y:  0.1, z: 0.9,  rotZ: -0.08 },
+  { x:  3.0, y:  0.0, z: 0.75, rotZ: -0.13 },
+  { x:  4.2, y: -0.3, z: 0.5,  rotZ: -0.19 },
+  { x:  5.4, y: -0.5, z: 0.2,  rotZ: -0.24 },
 ];
 
 const RARITY_OPTS = {
@@ -61,7 +66,7 @@ export function dealCardsAnimation(cards, fromPos = { x: 0, y: 1.8, z: 0 }) {
       const delay = i * 0.07;
       gsap.to(card.group.scale, { x: 1, y: 1, z: 1, duration: 0.4, delay, ease: 'back.out(2.5)' });
 
-      const arcPeakY = fromPos.y + 3.8 + Math.abs(i - 2) * 0.7;
+      const arcPeakY = fromPos.y + 3.8 + Math.abs(i - 4.5) * 0.7;
       const tl = gsap.timeline({ delay });
       tl.to(card.group.position, {
         x: fromPos.x + (pos.x - fromPos.x) * 0.3, y: arcPeakY, z: pos.z * 0.4,
