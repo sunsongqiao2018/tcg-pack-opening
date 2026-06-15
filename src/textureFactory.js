@@ -73,7 +73,7 @@ export function makePackTexture() {
   return new THREE.CanvasTexture(canvas);
 }
 
-export function makeCardFrontTexture(data) {
+export function makeCardFrontTexture(data, artImage = null) {
   const W = 512, H = 716;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -125,23 +125,41 @@ export function makeCardFrontTexture(data) {
 
   const artH = H * 0.42;
   const artY = 72;
-  const artGrad = ctx.createRadialGradient(W / 2, artY + artH / 2, 20, W / 2, artY + artH / 2, artH * 0.7);
-  artGrad.addColorStop(0, data.accentColor);
-  artGrad.addColorStop(0.6, data.primaryColor);
-  artGrad.addColorStop(1, '#000000');
-  ctx.fillStyle = artGrad;
-  ctx.roundRect(20, artY, W - 40, artH, 8);
-  ctx.fill();
 
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  for (let i = 0; i < 5; i++) {
+  if (artImage) {
+    // Dark art background — prevents halo around Pokémon transparent edges
+    ctx.fillStyle = '#08081a';
     ctx.beginPath();
-    const cx = (W / 5) * i + W / 10;
-    ctx.moveTo(cx - 20, artY + 10);
-    ctx.lineTo(cx + 20, artY + artH - 10);
-    ctx.lineWidth = 30 + i * 10;
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-    ctx.stroke();
+    ctx.roundRect(20, artY, W - 40, artH, 8);
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(20, artY, W - 40, artH, 8);
+    ctx.clip();
+    const maxSize = Math.min(W - 50, artH - 10);
+    ctx.drawImage(artImage, W / 2 - maxSize / 2, artY + (artH - maxSize) / 2, maxSize, maxSize);
+    ctx.restore();
+  } else {
+    // Procedural gradient art for cards without an image
+    const artGrad = ctx.createRadialGradient(W / 2, artY + artH / 2, 20, W / 2, artY + artH / 2, artH * 0.7);
+    artGrad.addColorStop(0, data.accentColor);
+    artGrad.addColorStop(0.6, data.primaryColor);
+    artGrad.addColorStop(1, '#000000');
+    ctx.fillStyle = artGrad;
+    ctx.roundRect(20, artY, W - 40, artH, 8);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      const cx = (W / 5) * i + W / 10;
+      ctx.moveTo(cx - 20, artY + 10);
+      ctx.lineTo(cx + 20, artY + artH - 10);
+      ctx.lineWidth = 30 + i * 10;
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.stroke();
+    }
   }
 
   ctx.fillStyle = '#ffffff';
@@ -184,7 +202,7 @@ export function makeCardFrontTexture(data) {
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.font = '13px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('PWR', 30, rarityY + 74);
+    ctx.fillText('HP', 30, rarityY + 74);
     ctx.textAlign = 'right';
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 18px Arial';
@@ -226,7 +244,7 @@ export function makeCardBackTexture() {
   ctx.roundRect(0, 0, W, H, 24);
   ctx.fill();
 
-  ctx.strokeStyle = 'rgba(150,100,255,0.5)';
+  ctx.strokeStyle = 'rgba(74, 28, 173, 0.5)';
   ctx.lineWidth = 1.5;
   const spacing = 32;
   for (let y = 0; y < H; y += spacing) {

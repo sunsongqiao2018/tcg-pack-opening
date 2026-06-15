@@ -4,7 +4,8 @@
       "Bash(npm run *)",
       "Bash(/c/Users/sunso/AppData/Roaming/npm/npm.cmd run *)",
       "Skill(run)",
-      "Skill(run:*)"
+      "Skill(run:*)",
+      "PowerShell(code \"C:\\\\Users\\\\sunso\\\\development\\\\project_autonomy\")"
     ]
   }
 }
