@@ -16,8 +16,8 @@ function slotScale(theta) {
 }
 
 export function idlePackAnimation(packGroup) {
-  return gsap.to(packGroup.rotation, {
-    y: Math.PI * 2, duration: 7, ease: 'none', repeat: -1,
+  return gsap.to(packGroup.position, {
+    y: '+=0.2', duration: 2.5, ease: 'sine.inOut', yoyo: true, repeat: -1,
   });
 }
 

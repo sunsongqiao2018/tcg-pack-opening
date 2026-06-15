@@ -140,6 +140,10 @@ function burstParticles(origin) {
 let swipeStartX = null;
 let isSwiping = false;
 
+// --- Touch tracking for tap detection ---
+let touchStartX = 0;
+let touchStartY = 0;
+
 // --- Wheel state ---
 const wheelState = { angle: 0 };
 let isDraggingWheel = false;
@@ -450,6 +454,116 @@ canvas.addEventListener('click', (e) => {
       const card = cards.find(c => c.meshForRaycasting === hits[0].object);
       if (card) handleCardClick(card);
     }
+  }
+});
+
+// --- Touch events (mobile support) ---
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+
+  resumeAudio();
+
+  if (state === STATE.IDLE_FAN) {
+    wheelDragStartY = touch.clientY;
+    wheelDragStartAngle = wheelState.angle;
+    wheelDragTotal = 0;
+    isDraggingWheel = true;
+    return;
+  }
+
+  if (state !== STATE.IDLE || !pack) return;
+  const hits = getIntersects(touch, [pack.meshForRaycasting]);
+  if (hits.length > 0) {
+    swipeStartX = touch.clientX;
+    isSwiping = true;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+
+  if (isDraggingWheel) {
+    const dy = touch.clientY - wheelDragStartY;
+    wheelDragTotal = Math.abs(dy);
+    wheelState.angle = wheelDragStartAngle + dy * 0.005;
+    updateWheelPositions();
+    return;
+  }
+
+  if (isSwiping && state === STATE.IDLE && pack) {
+    const dx = touch.clientX - swipeStartX;
+    pack.group.rotation.z = -dx * 0.003;
+    pack.group.rotation.x = 0.06;
+    const t = Math.min(Math.abs(dx) / 90, 1);
+    pack.group.scale.y = 1 - t * 0.12;
+    pack.group.scale.x = 1 + t * 0.04;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  const touch = e.changedTouches[0];
+  const movedX = touch.clientX - touchStartX;
+  const movedY = touch.clientY - touchStartY;
+  const moved = Math.sqrt(movedX * movedX + movedY * movedY);
+
+  if (isDraggingWheel) {
+    isDraggingWheel = false;
+    if (wheelDragTotal > 8) snapWheel();
+    return;
+  }
+
+  if (isSwiping) {
+    const dx = touch.clientX - (swipeStartX ?? touch.clientX);
+    isSwiping = false;
+    swipeStartX = null;
+    if (Math.abs(dx) >= 90 && state === STATE.IDLE && pack) {
+      playTear();
+      handlePackOpen();
+    } else if (pack && state === STATE.IDLE) {
+      gsap.to(pack.group.rotation, { z: 0, x: 0, duration: 0.4, ease: 'elastic.out(1.2, 0.5)', overwrite: 'auto' });
+      gsap.to(pack.group.scale, { y: 1.0, x: 1.0, duration: 0.35, ease: 'power2.out', overwrite: 'auto' });
+    }
+    return;
+  }
+
+  // Tap (minimal movement) — acts like a click
+  if (moved < 10) {
+    if (state === STATE.IDLE_FAN) {
+      if (wheelDragTotal > 8) { wheelDragTotal = 0; return; }
+      const fc = cards[frontCardIndex];
+      if (!fc) return;
+      const hits = getIntersects(touch, [fc.meshForRaycasting]);
+      if (hits.length > 0) handleCardClick(fc);
+      return;
+    }
+    if (state === STATE.REVEALED) {
+      const meshes = cards.map(c => c.meshForRaycasting);
+      const hits = getIntersects(touch, meshes);
+      if (hits.length > 0) {
+        const card = cards.find(c => c.meshForRaycasting === hits[0].object);
+        if (card) handleCardClick(card);
+      }
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', () => {
+  if (isDraggingWheel) {
+    isDraggingWheel = false;
+    snapWheel();
+    return;
+  }
+  if (isSwiping && pack && state === STATE.IDLE) {
+    isSwiping = false;
+    swipeStartX = null;
+    gsap.to(pack.group.rotation, { z: 0, x: 0, duration: 0.4, ease: 'elastic.out(1.2, 0.5)', overwrite: 'auto' });
+    gsap.to(pack.group.scale, { y: 1.0, x: 1.0, duration: 0.35, ease: 'power2.out', overwrite: 'auto' });
   }
 });
 
