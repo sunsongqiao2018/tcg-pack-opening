@@ -53,9 +53,9 @@ export function dealCardsAnimation(cards, fromPos = { x: 0, y: 1.8, z: 0 }) {
     const N = cards.length;
     const promises = cards.map((card, i) => new Promise(cardResolve => {
       const theta = (2 * Math.PI / N) * i;
-      const tx = WHEEL_RADIUS * Math.sin(theta);
+      const ty = WHEEL_RADIUS * Math.sin(theta);
       const tz = WHEEL_RADIUS * Math.cos(theta);
-      const targetRotY = Math.PI - theta;
+      const targetRotX = -theta;
       const s = slotScale(theta);
 
       card.group.position.set(fromPos.x, fromPos.y, fromPos.z);
@@ -65,21 +65,20 @@ export function dealCardsAnimation(cards, fromPos = { x: 0, y: 1.8, z: 0 }) {
       const delay = i * 0.07;
       gsap.to(card.group.scale, { x: s, y: s, z: s, duration: 0.4, delay, ease: 'back.out(2.5)' });
 
-      const arcPeakY = fromPos.y + 3.5;
       const tl = gsap.timeline({ delay });
       tl.to(card.group.position, {
-        x: fromPos.x + (tx - fromPos.x) * 0.3, y: arcPeakY, z: tz * 0.4,
+        x: 0, y: fromPos.y + 3.5, z: tz * 0.4,
         duration: 0.28, ease: 'power2.out',
       })
       .to(card.group.position, {
-        x: tx, y: 0, z: tz,
+        x: 0, y: ty, z: tz,
         duration: 0.38, ease: 'power3.in', onComplete: cardResolve,
       });
 
       gsap.to(card.group.rotation, {
-        y: Math.PI * 4 + targetRotY,
+        y: Math.PI * 4 + Math.PI,
         duration: 0.66, delay, ease: 'power2.inOut',
-        onComplete: () => gsap.set(card.group.rotation, { y: targetRotY }),
+        onComplete: () => gsap.set(card.group.rotation, { x: targetRotX, y: Math.PI }),
       });
     }));
     Promise.all(promises).then(resolve);
@@ -140,12 +139,12 @@ export function returnCardAnimation(card, index, total, wheelAngle) {
     if (card.foilUniforms) tl.to(card.foilUniforms.uOpacity, { value: 0, duration: 0.2 }, '<');
 
     tl.to(card.group.position, {
-      x: WHEEL_RADIUS * Math.sin(theta),
-      y: 0,
+      x: 0,
+      y: WHEEL_RADIUS * Math.sin(theta),
       z: WHEEL_RADIUS * Math.cos(theta),
       duration: 0.4, ease: 'power2.inOut',
     })
-    .to(card.group.rotation, { x: 0, y: Math.PI - theta, z: 0, duration: 0.3, ease: 'power2.inOut' }, '<')
+    .to(card.group.rotation, { x: -theta, y: Math.PI, z: 0, duration: 0.3, ease: 'power2.inOut' }, '<')
     .to(card.group.scale, { x: s, y: s, z: s, duration: 0.3, ease: 'power2.inOut' }, '<');
   });
 }

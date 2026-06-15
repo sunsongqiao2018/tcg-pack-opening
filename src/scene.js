@@ -43,17 +43,6 @@ export function createScene(canvas) {
   underLight.position.set(0, -3, 2);
   scene.add(underLight);
 
-  const tableGeo = new THREE.PlaneGeometry(30, 30);
-  const tableMat = new THREE.MeshStandardMaterial({
-    color: 0x141428,
-    roughness: 0.75,
-    metalness: 0.15,
-  });
-  const table = new THREE.Mesh(tableGeo, tableMat);
-  table.rotation.x = -Math.PI / 2;
-  table.position.y = -2.0;
-  table.receiveShadow = true;
-  scene.add(table);
 
   function onResize() {
     camera.aspect = window.innerWidth / window.innerHeight;

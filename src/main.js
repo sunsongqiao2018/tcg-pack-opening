@@ -143,7 +143,7 @@ let isSwiping = false;
 // --- Wheel state ---
 const wheelState = { angle: 0 };
 let isDraggingWheel = false;
-let wheelDragStartX = 0;
+let wheelDragStartY = 0;
 let wheelDragStartAngle = 0;
 let wheelDragTotal = 0;
 let frontCardIndex = 0;
@@ -171,11 +171,12 @@ function updateWheelPositions() {
     const s = 0.32 + 0.08 * (1 + cosT);
     const extraZ = i === fi ? 0.25 : 0;
     card.group.position.set(
-      WHEEL_RADIUS * Math.sin(theta),
       0,
+      WHEEL_RADIUS * Math.sin(theta),
       WHEEL_RADIUS * Math.cos(theta) + extraZ,
     );
-    card.group.rotation.y = Math.PI - theta;
+    card.group.rotation.x = -theta;
+    card.group.rotation.y = Math.PI;
     card.group.scale.set(s, s, s);
   }
 }
@@ -317,7 +318,7 @@ canvas.addEventListener('mousedown', (e) => {
   resumeAudio();
 
   if (state === STATE.IDLE_FAN) {
-    wheelDragStartX = e.clientX;
+    wheelDragStartY = e.clientY;
     wheelDragStartAngle = wheelState.angle;
     wheelDragTotal = 0;
     isDraggingWheel = true;
@@ -371,9 +372,9 @@ canvas.addEventListener('mouseleave', () => {
 canvas.addEventListener('mousemove', (e) => {
   // Wheel drag
   if (isDraggingWheel) {
-    const dx = e.clientX - wheelDragStartX;
-    wheelDragTotal = Math.abs(dx);
-    wheelState.angle = wheelDragStartAngle + dx * 0.005;
+    const dy = e.clientY - wheelDragStartY;
+    wheelDragTotal = Math.abs(dy);
+    wheelState.angle = wheelDragStartAngle + dy * 0.005;
     updateWheelPositions();
     canvas.style.cursor = 'grabbing';
     return;
