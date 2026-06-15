@@ -1,18 +1,18 @@
 import gsap from 'gsap';
 import { playLegendaryBuildUp } from './sound.js';
 
-// 2-column × 5-row grid — fills vertically to fit any screen width
+// 1-column × 10-row layout — clear vertical stack, no overlap
 const FAN_POSITIONS = [
-  { x: -1.5, y:  3.0, z: 0, rotZ: 0 },
-  { x:  1.5, y:  3.0, z: 0, rotZ: 0 },
-  { x: -1.5, y:  1.5, z: 0, rotZ: 0 },
-  { x:  1.5, y:  1.5, z: 0, rotZ: 0 },
-  { x: -1.5, y:  0.0, z: 0, rotZ: 0 },
-  { x:  1.5, y:  0.0, z: 0, rotZ: 0 },
-  { x: -1.5, y: -1.5, z: 0, rotZ: 0 },
-  { x:  1.5, y: -1.5, z: 0, rotZ: 0 },
-  { x: -1.5, y: -3.0, z: 0, rotZ: 0 },
-  { x:  1.5, y: -3.0, z: 0, rotZ: 0 },
+  { x: 0, y:  6.75, z: 0, rotZ: 0 },
+  { x: 0, y:  5.25, z: 0, rotZ: 0 },
+  { x: 0, y:  3.75, z: 0, rotZ: 0 },
+  { x: 0, y:  2.25, z: 0, rotZ: 0 },
+  { x: 0, y:  0.75, z: 0, rotZ: 0 },
+  { x: 0, y: -0.75, z: 0, rotZ: 0 },
+  { x: 0, y: -2.25, z: 0, rotZ: 0 },
+  { x: 0, y: -3.75, z: 0, rotZ: 0 },
+  { x: 0, y: -5.25, z: 0, rotZ: 0 },
+  { x: 0, y: -6.75, z: 0, rotZ: 0 },
 ];
 
 const RARITY_OPTS = {
@@ -65,10 +65,9 @@ export function dealCardsAnimation(cards, fromPos = { x: 0, y: 1.8, z: 0 }) {
       card.group.scale.set(0.05, 0.05, 0.05);
 
       const delay = i * 0.07;
-      gsap.to(card.group.scale, { x: 1, y: 1, z: 1, duration: 0.4, delay, ease: 'back.out(2.5)' });
+      gsap.to(card.group.scale, { x: 0.48, y: 0.48, z: 0.48, duration: 0.4, delay, ease: 'back.out(2.5)' });
 
-      const row = Math.floor(i / 2);
-      const arcPeakY = fromPos.y + 2.8 + (4 - row) * 0.35;
+      const arcPeakY = fromPos.y + 3.5;
       const tl = gsap.timeline({ delay });
       tl.to(card.group.position, {
         x: fromPos.x + (pos.x - fromPos.x) * 0.3, y: arcPeakY, z: pos.z * 0.4,
@@ -146,7 +145,7 @@ export function returnCardAnimation(card, index) {
 
     tl.to(card.group.position, { x: pos.x, y: pos.y, z: pos.z, duration: 0.4, ease: 'power2.inOut' })
       .to(card.group.rotation, { x: 0, z: pos.rotZ, duration: 0.3, ease: 'power2.inOut' }, '<')
-      .to(card.group.scale, { x: 1, y: 1, z: 1, duration: 0.3, ease: 'power2.inOut' }, '<');
+      .to(card.group.scale, { x: 0.48, y: 0.48, z: 0.48, duration: 0.3, ease: 'power2.inOut' }, '<');
   });
 }
 

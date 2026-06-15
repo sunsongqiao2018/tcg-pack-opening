@@ -11,10 +11,10 @@ export function createScene(canvas) {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x090d22);
-  scene.fog = new THREE.FogExp2(0x090d22, 0.015);
+  scene.fog = new THREE.FogExp2(0x090d22, 0.010);
 
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0, 1.5, 12);
+  camera.position.set(0, 1.5, 18);
   camera.lookAt(0, 0, 0);
 
   const ambient = new THREE.AmbientLight(0x2244bb, 3.5);
