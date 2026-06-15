@@ -55,7 +55,7 @@ export function dealCardsAnimation(cards, fromPos = { x: 0, y: 1.8, z: 0 }) {
       const theta = (2 * Math.PI / N) * i;
       const ty = WHEEL_RADIUS * Math.sin(theta);
       const tz = WHEEL_RADIUS * Math.cos(theta);
-      const targetRotX = -theta;
+      const targetRotX = 0;
       const s = slotScale(theta);
 
       card.group.position.set(fromPos.x, fromPos.y, fromPos.z);
@@ -144,7 +144,7 @@ export function returnCardAnimation(card, index, total, wheelAngle) {
       z: WHEEL_RADIUS * Math.cos(theta),
       duration: 0.4, ease: 'power2.inOut',
     })
-    .to(card.group.rotation, { x: -theta, y: Math.PI, z: 0, duration: 0.3, ease: 'power2.inOut' }, '<')
+    .to(card.group.rotation, { x: 0, y: Math.PI, z: 0, duration: 0.3, ease: 'power2.inOut' }, '<')
     .to(card.group.scale, { x: s, y: s, z: s, duration: 0.3, ease: 'power2.inOut' }, '<');
   });
 }

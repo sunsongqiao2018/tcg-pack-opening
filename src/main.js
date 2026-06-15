@@ -175,7 +175,7 @@ function updateWheelPositions() {
       WHEEL_RADIUS * Math.sin(theta),
       WHEEL_RADIUS * Math.cos(theta) + extraZ,
     );
-    card.group.rotation.x = -theta;
+    card.group.rotation.x = 0;
     card.group.rotation.y = Math.PI;
     card.group.scale.set(s, s, s);
   }
