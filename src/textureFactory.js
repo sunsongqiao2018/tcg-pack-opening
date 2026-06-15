@@ -8,13 +8,13 @@ export function makePackTexture() {
   const ctx = canvas.getContext('2d');
 
   const grad = ctx.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, '#1a0533');
-  grad.addColorStop(0.5, '#2d0a6e');
-  grad.addColorStop(1, '#0d0224');
+  grad.addColorStop(0, '#031a4a');
+  grad.addColorStop(0.5, '#0a2d8e');
+  grad.addColorStop(1, '#020d24');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  ctx.strokeStyle = 'rgba(180,100,255,0.4)';
+  ctx.strokeStyle = 'rgba(60,140,255,0.4)';
   ctx.lineWidth = 2;
   for (let i = 0; i < 12; i++) {
     ctx.beginPath();
@@ -29,17 +29,17 @@ export function makePackTexture() {
     ctx.stroke();
   }
 
-  ctx.strokeStyle = 'rgba(200,120,255,0.8)';
+  ctx.strokeStyle = 'rgba(60,140,255,0.8)';
   ctx.lineWidth = 8;
   ctx.strokeRect(20, 20, W - 40, H - 40);
-  ctx.strokeStyle = 'rgba(255,180,255,0.4)';
+  ctx.strokeStyle = 'rgba(120,180,255,0.4)';
   ctx.lineWidth = 2;
   ctx.strokeRect(30, 30, W - 60, H - 60);
 
   const starGrad = ctx.createRadialGradient(W / 2, H * 0.35, 20, W / 2, H * 0.35, 140);
   starGrad.addColorStop(0, 'rgba(255,220,80,0.9)');
-  starGrad.addColorStop(0.5, 'rgba(220,120,255,0.5)');
-  starGrad.addColorStop(1, 'rgba(100,0,200,0)');
+  starGrad.addColorStop(0.5, 'rgba(80,160,255,0.5)');
+  starGrad.addColorStop(1, 'rgba(0,40,200,0)');
   ctx.fillStyle = starGrad;
   ctx.beginPath();
   ctx.arc(W / 2, H * 0.35, 140, 0, Math.PI * 2);
@@ -49,7 +49,7 @@ export function makePackTexture() {
   ctx.font = 'bold 72px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(180,100,255,1)';
+  ctx.shadowColor = 'rgba(60,140,255,1)';
   ctx.shadowBlur = 30;
   ctx.fillText('TCG', W / 2, H * 0.35);
   ctx.shadowBlur = 0;
