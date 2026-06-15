@@ -1,17 +1,18 @@
 import gsap from 'gsap';
 import { playLegendaryBuildUp } from './sound.js';
 
+// 2-column × 5-row grid — fills vertically to fit any screen width
 const FAN_POSITIONS = [
-  { x: -5.4, y: -0.5, z: 0.2,  rotZ:  0.24 },
-  { x: -4.2, y: -0.3, z: 0.5,  rotZ:  0.19 },
-  { x: -3.0, y:  0.0, z: 0.75, rotZ:  0.13 },
-  { x: -1.8, y:  0.1, z: 0.9,  rotZ:  0.08 },
-  { x: -0.6, y:  0.2, z: 1.0,  rotZ:  0.03 },
-  { x:  0.6, y:  0.2, z: 1.0,  rotZ: -0.03 },
-  { x:  1.8, y:  0.1, z: 0.9,  rotZ: -0.08 },
-  { x:  3.0, y:  0.0, z: 0.75, rotZ: -0.13 },
-  { x:  4.2, y: -0.3, z: 0.5,  rotZ: -0.19 },
-  { x:  5.4, y: -0.5, z: 0.2,  rotZ: -0.24 },
+  { x: -1.5, y:  3.0, z: 0, rotZ: 0 },
+  { x:  1.5, y:  3.0, z: 0, rotZ: 0 },
+  { x: -1.5, y:  1.5, z: 0, rotZ: 0 },
+  { x:  1.5, y:  1.5, z: 0, rotZ: 0 },
+  { x: -1.5, y:  0.0, z: 0, rotZ: 0 },
+  { x:  1.5, y:  0.0, z: 0, rotZ: 0 },
+  { x: -1.5, y: -1.5, z: 0, rotZ: 0 },
+  { x:  1.5, y: -1.5, z: 0, rotZ: 0 },
+  { x: -1.5, y: -3.0, z: 0, rotZ: 0 },
+  { x:  1.5, y: -3.0, z: 0, rotZ: 0 },
 ];
 
 const RARITY_OPTS = {
@@ -66,7 +67,8 @@ export function dealCardsAnimation(cards, fromPos = { x: 0, y: 1.8, z: 0 }) {
       const delay = i * 0.07;
       gsap.to(card.group.scale, { x: 1, y: 1, z: 1, duration: 0.4, delay, ease: 'back.out(2.5)' });
 
-      const arcPeakY = fromPos.y + 3.8 + Math.abs(i - 4.5) * 0.7;
+      const row = Math.floor(i / 2);
+      const arcPeakY = fromPos.y + 2.8 + (4 - row) * 0.35;
       const tl = gsap.timeline({ delay });
       tl.to(card.group.position, {
         x: fromPos.x + (pos.x - fromPos.x) * 0.3, y: arcPeakY, z: pos.z * 0.4,

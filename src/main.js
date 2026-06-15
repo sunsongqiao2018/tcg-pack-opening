@@ -359,7 +359,7 @@ function animate() {
   time += 0.016;
 
   camera.position.x = Math.sin(time * 0.15) * 0.3 + cameraShake.x;
-  camera.position.y = 2 + Math.sin(time * 0.1) * 0.15 + cameraShake.y;
+  camera.position.y = 1.5 + Math.sin(time * 0.1) * 0.15 + cameraShake.y;
   camera.lookAt(0, 0, 0);
 
   if (pack) {
